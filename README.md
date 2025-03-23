@@ -1,41 +1,78 @@
-Music App
+# 🎵 Music App
 
-Este proyecto es una aplicación web de música desarrollada con React, TypeScript y Vite, siguiendo principios de Clean Architecture y Hexagonal Architecture. Utiliza una lista doblemente enlazada para gestionar canciones y patrones de diseño como Singleton, Observer, Decorator, Factory, Strategy y Adapter.
+🚀 **Music App** es una aplicación web para gestionar y reproducir música, desarrollada con **React**, **TypeScript**, **Vite** y siguiendo los principios de **Clean Architecture + Hexagonal Architecture**.
 
-Tecnologías utilizadas
+---
 
-React + TypeScript + Vite
+## 📌 Características
 
-TailwindCSS para estilos
+- 🎶 **Gestión de Canciones** con una lista doblemente enlazada.
+- 🏗 **Arquitectura Modular** con separación clara entre **Core**, **Infrastructure** y **UI**.
+- 🎨 **Interfaz Moderna** con **TailwindCSS** y animaciones en **Framer Motion**.
+- 🛠 **Patrones de Diseño** implementados: Singleton, Observer, Decorator, Factory, Strategy y Adapter.
+- 📦 **Almacenamiento Local** con LocalStorage.
+- 🎧 **Posible integración con la API de Spotify** *(futuro desarrollo)*.
 
-Framer Motion para animaciones
+---
 
-LocalStorage para almacenamiento
+## 🚀 Instalación y Uso
 
-Eslint y Prettier para el formateo y calidad del código
-
-Instalación
-
-Clona el repositorio:
-
+### 1️⃣ Clonar el Repositorio
+```sh
 git clone https://github.com/Nicolas-12000/Music-App.git
-cd music-app
+cd Music-App
+```
 
-Instala las dependencias:
-
+### 2️⃣ Instalar Dependencias
+```sh
 npm install
+```
 
-Inicia el entorno de desarrollo:
-
+### 3️⃣ Ejecutar en Desarrollo
+```sh
 npm run dev
+```
 
-Configuración de ESLint
+### 4️⃣ Construir para Producción
+```sh
+npm run build
+```
 
-Para habilitar reglas avanzadas de ESLint, puedes configurar eslint.config.js de la siguiente manera:
+---
 
-import tseslint from '@typescript-eslint/eslint-plugin'
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## 📂 Estructura del Proyecto
+
+```
+Music-App/
+│── src/
+│   ├── core/             # Lógica de negocio
+│   │   ├── entities/     # Entidades de dominio
+│   │   ├── usecases/     # Casos de uso
+│   │   ├── ports/        # Interfaces de comunicación
+│   ├── infrastructure/   # Infraestructura (API, persistencia, adaptadores)
+│   ├── ui/               # Interfaz de usuario (React + Context API)
+│   │   ├── components/   # Componentes reutilizables
+│   │   ├── contexts/     # Gestión de estado global
+│   │   ├── themes/       # Configuración de estilos
+│── public/
+│── package.json
+│── tsconfig.json
+│── vite.config.ts
+│── README.md
+```
+
+---
+
+## 🎯 Estilo de Código con ESLint y Prettier
+
+Este proyecto utiliza **ESLint** y **Prettier** para mantener un código limpio y consistente.
+
+### 📌 Reglas Adicionales de ESLint
+Si deseas habilitar reglas avanzadas de linting, puedes actualizar `eslint.config.js`:
+```js
+import tseslint from "@typescript-eslint/eslint-plugin";
+import reactX from "eslint-plugin-react-x";
+import reactDom from "eslint-plugin-react-dom";
 
 export default tseslint.config({
   extends: [
@@ -44,53 +81,58 @@ export default tseslint.config({
     ...tseslint.configs.stylisticTypeChecked,
   ],
   plugins: {
-    'react-x': reactX,
-    'react-dom': reactDom,
+    "react-x": reactX,
+    "react-dom": reactDom,
   },
   rules: {
-    ...reactX.configs['recommended-typescript'].rules,
+    ...reactX.configs["recommended-typescript"].rules,
     ...reactDom.configs.recommended.rules,
   },
-  languageOptions: {
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+});
+```
 
-Estructura del Proyecto
+Para corregir errores automáticamente, ejecuta:
+```sh
+npm run lint --fix
+```
 
-/music-app
-├── src/
-│   ├── core/                # Lógica de negocio
-│   │   ├── entities/        # Entidades
-│   │   ├── usecases/        # Casos de uso
-│   │   ├── ports/           # Interfaces de puertos
-│   ├── infrastructure/      # Adaptadores
-│   │   ├── api/             # Integraciones con APIs externas
-│   │   ├── persistence/     # Persistencia de datos (LocalStorage, IndexedDB, etc.)
-│   ├── ui/                  # Interfaz de usuario
-│   │   ├── components/      # Componentes reutilizables
-│   │   ├── contexts/        # Context API y estado global
-│   │   ├── themes/          # Temas y estilos
-├── .eslintrc.js             # Configuración de ESLint
-├── tailwind.config.js       # Configuración de Tailwind
-├── tsconfig.json            # Configuración de TypeScript
-├── vite.config.ts           # Configuración de Vite
+---
 
-Contribución
+## 🛠 Tecnologías Utilizadas
 
-Realiza un fork del repositorio.
+| Tecnología         | Descripción |
+|-------------------|-------------|
+| **React**        | Biblioteca para construir interfaces |
+| **TypeScript**   | Tipado estático para mayor seguridad |
+| **Vite**         | Empaquetador ultrarrápido |
+| **TailwindCSS**  | Framework de estilos |
+| **Framer Motion**| Animaciones fluidas |
+| **LocalStorage** | Almacenamiento de datos en el navegador |
+| **ESLint**       | Herramienta de análisis de código |
 
-Crea una nueva rama (git checkout -b feature-nueva-funcionalidad).
+---
 
-Realiza tus cambios y haz commit (git commit -m "Agrega nueva funcionalidad").
+## 📝 Contribuciones
 
-Sube tu rama (git push origin feature-nueva-funcionalidad).
+¡Las contribuciones son bienvenidas! Si deseas mejorar este proyecto, sigue estos pasos:
+1. **Haz un Fork** del repositorio.
+2. **Crea una nueva rama** (`git checkout -b feature-nueva-funcionalidad`).
+3. **Realiza tus cambios y haz un commit** (`git commit -m 'Agregada nueva funcionalidad'`).
+4. **Haz un push a tu fork** (`git push origin feature-nueva-funcionalidad`).
+5. **Abre un Pull Request** 🚀.
 
-Abre un Pull Request.
+---
 
-Licencia
+## 🏆 Autor
 
-Este proyecto está bajo la licencia MIT.
+👤 **Nicolas-12000**  
+📌 GitHub: [Nicolas-12000](https://github.com/Nicolas-12000)
+
+💡 Si te gustó este proyecto, ¡no olvides dejar una ⭐ en GitHub!
+
+---
+
+## 📜 Licencia
+
+Este proyecto está bajo la licencia **MIT**. ¡Úsalo libremente! 🎵
+
