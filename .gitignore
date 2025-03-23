@@ -9,19 +9,22 @@ lerna-debug.log*
 
 # Dependencies
 node_modules/
-
-# Build output
-dist/
-dist-ssr/
+/dist/
+/dist-ssr/
+/build/
+.cache/
+.npm/
+.pnp/
+.pnp.js
 .out/
 .next/
 
-# Local environment files
-*.local
+# Environment
 .env*
+*.local
 
-# Editor directories and files
-.vscode/
+# Editor/IDE
+.vscode/*
 !.vscode/extensions.json
 .idea/
 .DS_Store
@@ -37,11 +40,6 @@ dist-ssr/
 # Jest and Testing
 coverage/
 
-# Logs & Debugging
-.npm/
-.pnp/
-.pnp.js
-
 # macOS system files
 *.DS_Store
 
@@ -55,5 +53,4 @@ Thumbs.db
 .tailwind/
 
 # Miscellaneous
-.cache/
 *.bak
