@@ -1,23 +1,34 @@
-# 🎵 Music App
+# 🎵 Music App  
 
-🚀 **Music App** es una aplicación web para gestionar y reproducir música, desarrollada con **React**, **TypeScript**, **Vite** y siguiendo los principios de **Clean Architecture + Hexagonal Architecture**.
-
----
-
-## 📌 Características
-
-- 🎶 **Gestión de Canciones** con una lista doblemente enlazada.
-- 🏗 **Arquitectura Modular** con separación clara entre **Core**, **Infrastructure** y **UI**.
-- 🎨 **Interfaz Moderna** con **TailwindCSS** y animaciones en **Framer Motion**.
-- 🛠 **Patrones de Diseño** implementados: Singleton, Observer, Decorator, Factory, Strategy y Adapter.
-- 📦 **Almacenamiento Local** con LocalStorage.
-- 🎧 **Posible integración con la API de Spotify** *(futuro desarrollo)*.
+🚀 **Music App** es una aplicación web moderna para gestionar y reproducir música, diseñada con **React**, **TypeScript** y **Vite**, siguiendo principios de **Clean Architecture + Hexagonal Architecture**.  
 
 ---
 
-## 🚀 Instalación y Uso
+## 🚀 Mejoras y Funcionalidades  
 
-### 1️⃣ Clonar el Repositorio
+🔥 **Integración con Spotify**: Reproducción de música directamente desde la API de Spotify.  
+🎯 **Selección de Estrategia**: Ahora puedes agregar canciones al inicio, al final o después de la canción actual.  
+🎵 **Nuevo Mini Reproductor**: Controles intuitivos para cambiar de canción.  
+📦 **Mejoras en la UI**: Barra de progreso estática y colores más armoniosos.  
+💾 **Persistencia Mejorada**: Almacenamiento de playlist en **LocalStorage**.  
+🔧 **Corrección de Errores**: Validaciones más robustas para la estructura de la playlist.  
+
+---
+
+## 📌 Características  
+
+✅ **Reproducción con Spotify**: Integración con el SDK de Spotify.  
+🎶 **Lista de reproducción dinámica**: Usa una lista doblemente enlazada.  
+🛠 **Patrones de Diseño**: Singleton, Observer, Decorator, Factory, Strategy y Adapter.  
+🎨 **Interfaz Moderna**: Diseñada con **TailwindCSS** y animaciones en **Framer Motion**.  
+📦 **Almacenamiento Local**: Guarda automáticamente la playlist en **LocalStorage**.  
+🖱 **Selección de estrategia**: Elige cómo agregar canciones a la lista.  
+
+---
+
+## 🚀 Instalación y Uso  
+
+### 1️⃣ Clonar el Repositorio  
 ```sh
 git clone https://github.com/Nicolas-12000/Music-App.git
 cd Music-App
