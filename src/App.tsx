@@ -1,35 +1,48 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React from 'react';
+import styled from 'styled-components';
+import { MusicProvider } from './ui/contexts/MusicContext';
+import { MusicApp } from './ui/components/MusicApp';
 
-function App() {
-  const [count, setCount] = useState(0)
+const AppWrapper = styled.div`
+  min-height: 100vh;
+  background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
+  color: #fff;
+`;
 
+const Container = styled.div`
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+`;
+
+const Header = styled.header`
+  text-align: center;
+  margin-bottom: 2rem;
+`;
+
+const Title = styled.h1`
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 1rem;
+  background: linear-gradient(90deg, #3fa9f5 0%, #6b5df5 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+`;
+
+const App = () => {
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <MusicProvider>
+      <AppWrapper>
+        <Container>
+          <Header>
+            <Title>Music App</Title>
+          </Header>
+          <MusicApp />
+        </Container>
+      </AppWrapper>
+    </MusicProvider>
+  );
+};
 
-export default App
+export default App;

@@ -7,6 +7,7 @@ import { SpotifyAuthService } from '@/infrastructure/auth/SpotifyAuthService';
 import { AddSongUseCase } from '@/core/usecases/AddSongUseCase';
 import { LoadPlaylistUseCase } from '@/core/usecases/LoadPlaylistUseCase';
 import { AddToStart, AddToEnd, AddAfterCurrent } from '@/core/strategies/AddStrategies';
+import { SearchResultTrack } from '@/core/ports/IMetadataFetcher';
 
 export type AddStrategyType = 'start' | 'end' | 'afterCurrent';
 
@@ -23,6 +24,10 @@ interface MusicContextType {
   next: () => Promise<void>;
   previous: () => Promise<void>;
   playById: (id: string) => void;
+  searchResults: SearchResultTrack[];
+  handleSearch: (query: string) => Promise<void>;
+  setSearchResults: (results: SearchResultTrack[]) => void;
+  spotifyAdapter: SpotifyAdapter | null;
 }
 
 const MusicContext = createContext<MusicContextType | undefined>(undefined);
@@ -38,6 +43,7 @@ export function MusicProvider({ children }: MusicProviderProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [spotifyAdapter, setSpotifyAdapter] = useState<SpotifyAdapter | null>(null);
+  const [searchResults, setSearchResults] = useState<SearchResultTrack[]>([]);
 
   const persistenceAdapter = new LocalStorageAdapter();
 
@@ -48,15 +54,12 @@ export function MusicProvider({ children }: MusicProviderProps) {
   const handleSpotifyCallback = async (code: string) => {
     setIsAuthenticating(true);
     try {
-      const tokenData = await SpotifyAuthService.getAccessToken(code);
-      setSpotifyAdapter(new SpotifyAdapter(
-        tokenData.access_token,
-        tokenData.refresh_token
-      ));
+      const adapter = await SpotifyAdapter.initialize(code);
+      setSpotifyAdapter(adapter);
       setIsAuthenticated(true);
     } catch (error) {
-      console.error("Authentication failed:", error);
-      throw error;
+      console.error("Error de autenticación:", error);
+      setIsAuthenticated(false);
     } finally {
       setIsAuthenticating(false);
     }
@@ -157,6 +160,21 @@ export function MusicProvider({ children }: MusicProviderProps) {
     }
   };
 
+  const handleSearch = async (query: string) => {
+    if (!spotifyAdapter || query.length < 3) {
+      setSearchResults([]);
+      return;
+    }
+    
+    try {
+      const results = await spotifyAdapter.searchTracks(query);
+      setSearchResults(results);
+    } catch (error) {
+      console.error('Error en la búsqueda:', error);
+      setSearchResults([]);
+    }
+  };
+
   const value: MusicContextType = {
     playlist,
     currentSong,
@@ -169,7 +187,11 @@ export function MusicProvider({ children }: MusicProviderProps) {
     removeSong,
     next,
     previous,
-    playById
+    playById,
+    searchResults,
+    handleSearch,
+    setSearchResults,
+    spotifyAdapter
   };
 
   return (

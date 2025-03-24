@@ -1,14 +1,20 @@
 import axios from 'axios';
 
+export interface SpotifyTokenResponse {
+    access_token: string;
+    refresh_token?: string;
+    expires_in: number;
+}
+
 /**
  * Servicio para manejar la autenticación con Spotify
  */
 export class SpotifyAuthService {
     private static readonly SPOTIFY_AUTH_URL = 'https://accounts.spotify.com/authorize';
-    private static readonly SPOTIFY_TOKEN_URL = 'https://accounts.spotify.com/api/token';
     private static readonly CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
     private static readonly CLIENT_SECRET = import.meta.env.VITE_SPOTIFY_CLIENT_SECRET;
     private static readonly REDIRECT_URI = import.meta.env.VITE_SPOTIFY_REDIRECT_URI;
+    private static readonly TOKEN_URL = 'https://accounts.spotify.com/api/token';
 
     /**
      * Obtiene la URL de autorización de Spotify
@@ -29,8 +35,7 @@ export class SpotifyAuthService {
      */
     static async getAccessToken(code: string): Promise<{ 
         access_token: string, 
-        refresh_token: string, 
-        expires_in: number 
+        refresh_token: string 
     }> {
         try {
             const params = new URLSearchParams({
@@ -40,7 +45,7 @@ export class SpotifyAuthService {
             });
 
             const response = await axios.post(
-                this.SPOTIFY_TOKEN_URL,
+                this.TOKEN_URL,
                 params,
                 {
                     headers: {
@@ -54,23 +59,17 @@ export class SpotifyAuthService {
 
             return {
                 access_token: response.data.access_token,
-                refresh_token: response.data.refresh_token,
-                expires_in: response.data.expires_in
+                refresh_token: response.data.refresh_token
             };
         } catch (error: any) {
-            const mensajeError = error.response?.data?.error_description 
-                || 'Error al autenticar con Spotify';
-            throw new Error(`Error de Autenticación Spotify: ${mensajeError}`);
+            throw new Error(`Auth failed: ${error.response?.data?.error || error.message}`);
         }
     }
 
     /**
      * Refresca el token de acceso usando el token de refresco
      */
-    static async refreshToken(refreshToken: string): Promise<{
-        access_token: string,
-        expires_in: number
-    }> {
+    static async refreshToken(refreshToken: string): Promise<SpotifyTokenResponse> {
         try {
             const params = new URLSearchParams({
                 grant_type: 'refresh_token',
@@ -78,7 +77,7 @@ export class SpotifyAuthService {
             });
 
             const response = await axios.post(
-                this.SPOTIFY_TOKEN_URL,
+                this.TOKEN_URL,
                 params,
                 {
                     headers: {
@@ -90,12 +89,9 @@ export class SpotifyAuthService {
                 }
             );
 
-            return {
-                access_token: response.data.access_token,
-                expires_in: response.data.expires_in
-            };
-        } catch (error: any) {
-            throw new Error(`Error al refrescar el token: ${error.response?.data?.error || 'Error desconocido'}`);
+            return response.data;
+        } catch (error) {
+            throw new Error('Error al refrescar el token');
         }
     }
 }

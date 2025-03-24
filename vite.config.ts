@@ -6,19 +6,10 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@core': path.resolve(__dirname, './src/core'),
-      '@ui': path.resolve(__dirname, './src/ui'),
-    },
+      '@': path.resolve(__dirname, './src')
+    }
   },
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          react: ['react', 'react-dom'],
-          state: ['framer-motion', 'axios'],
-        },
-      },
-    },
-  },
+  server: {
+    port: 5173
+  }
 })

@@ -1,5 +1,47 @@
+import React from 'react';
+import styled from 'styled-components';
 import { useMusicContext } from '@/ui/contexts/MusicContext';
-import { SongCard } from '@/ui/components/songs/SongCarts';
+import { SongCard } from '@/ui/components/songs/SongCards';
+
+const LoginContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+`;
+
+const LoginButton = styled.button`
+  padding: 12px 24px;
+  border-radius: 12px;
+  background: ${({ theme }) => theme.colors.primary};
+  color: white;
+  border: none;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(63, 169, 245, 0.3);
+  }
+`;
+
+export const LoginView: React.FC = () => {
+  const handleLogin = () => {
+    // Add your Spotify login logic here
+    window.location.href = `https://accounts.spotify.com/authorize?client_id=${import.meta.env.VITE_SPOTIFY_CLIENT_ID}&redirect_uri=${encodeURIComponent(import.meta.env.VITE_SPOTIFY_REDIRECT_URI)}&scope=playlist-modify-public playlist-modify-private user-read-private user-read-email&response_type=code`;
+  };
+
+  return (
+    <LoginContainer>
+      <h2>Connect with Spotify to start</h2>
+      <LoginButton onClick={handleLogin}>
+        Login with Spotify
+      </LoginButton>
+    </LoginContainer>
+  );
+};
 
 export function PlaylistView() {
   const { playlist, currentSong, spotifyLogin, isAuthenticated } = useMusicContext();
@@ -10,12 +52,7 @@ export function PlaylistView() {
       <header className="mb-8 text-center">
         <h1 className="text-4xl font-bold text-text mb-4">Your Playlist</h1>
         {!isAuthenticated && (
-          <button
-            onClick={spotifyLogin}
-            className="bg-[#1DB954] text-white px-6 py-2 rounded-full hover:bg-[#1ed760] transition-colors"
-          >
-            Connect with Spotify
-          </button>
+          <LoginView />
         )}
       </header>
 
