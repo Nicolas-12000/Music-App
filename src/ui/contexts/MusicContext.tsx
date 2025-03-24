@@ -8,6 +8,7 @@ import { AddSongUseCase } from '@/core/usecases/AddSongUseCase';
 import { LoadPlaylistUseCase } from '@/core/usecases/LoadPlaylistUseCase';
 import { AddToStart, AddToEnd, AddAfterCurrent } from '@/core/strategies/AddStrategies';
 import { SearchResultTrack } from '@/core/ports/IMetadataFetcher';
+import { toast } from 'react-toastify';
 
 // Improved Spotify types
 interface SpotifyPlayerConfig {
@@ -57,7 +58,7 @@ interface MusicContextType {
   isAuthenticated: boolean;
   isAuthenticating: boolean;
   spotifyLogin: () => void;
-  handleSpotifyCallback: (code: string) => Promise<void>;
+  handleSpotifyCallback: (code: string | undefined) => Promise<void>;
   addSong: (data: SongData, strategy?: AddStrategyType) => Promise<void>;
   removeSong: (id: string) => Promise<void>;
   next: () => Promise<void>;
@@ -78,6 +79,8 @@ const MusicContext = createContext<MusicContextType | undefined>(undefined);
 interface MusicProviderProps {
   children: ReactNode;
 }
+
+const TOKEN_STORAGE_KEY = 'spotify_tokens';
 
 export function MusicProvider({ children }: MusicProviderProps) {
   const [playlist] = useState<Playlist>(new Playlist());
@@ -105,43 +108,69 @@ export function MusicProvider({ children }: MusicProviderProps) {
     window.location.href = authUrl;
   };
 
-  const handleSpotifyCallback = async (code: string) => {
+  const handleSpotifyCallback = async (code: string | undefined) => {
     setIsAuthenticating(true);
     try {
+      if (!code) {
+        throw new Error('Authorization code is missing from callback');
+      }
       const adapter = await SpotifyAdapter.initialize(code);
       setSpotifyAdapter(adapter);
       setIsAuthenticated(true);
+
+      localStorage.setItem(
+        TOKEN_STORAGE_KEY,
+        JSON.stringify({
+          accessToken: adapter.getAccessToken(),
+          refreshToken: adapter.getRefreshToken(),
+        })
+      );
+      toast.success('Successfully connected to Spotify!');
     } catch (error) {
-      console.error("Error de autenticación:", error);
+      console.error('Error de autenticación:', error);
       setIsAuthenticated(false);
+      toast.error('Failed to connect to Spotify. Please try again.');
     } finally {
       setIsAuthenticating(false);
     }
   };
 
   useEffect(() => {
-    async function loadData() {
+    async function initialize() {
       try {
+        const storedTokens = localStorage.getItem(TOKEN_STORAGE_KEY);
+        if (storedTokens) {
+          const { accessToken, refreshToken } = JSON.parse(storedTokens);
+          const adapter = new SpotifyAdapter(accessToken, refreshToken);
+          setSpotifyAdapter(adapter);
+          setIsAuthenticated(true);
+
+          try {
+            await adapter.getCurrentPlayback();
+          } catch (error) {
+            setIsAuthenticated(false);
+            localStorage.removeItem(TOKEN_STORAGE_KEY);
+            toast.warn('Session expired. Please log in again.');
+          }
+        }
+
         const loadPlaylistUseCase = new LoadPlaylistUseCase(persistenceAdapter);
         const savedPlaylist = await loadPlaylistUseCase.execute();
-        
         playlist.head = savedPlaylist.head;
         playlist.tail = savedPlaylist.tail;
         playlist.current = savedPlaylist.current;
         playlist.length = savedPlaylist.length;
-        
         setCurrentSong(savedPlaylist.current);
       } catch (error) {
-        console.error("Error al cargar los datos:", error);
+        console.error('Error al inicializar datos:', error);
+        toast.error('Failed to load your data. Starting fresh.');
       } finally {
         setIsLoading(false);
       }
     }
-
-    loadData();
+    initialize();
   }, [playlist]);
 
-  // Initialize Spotify player
   useEffect(() => {
     if (!isAuthenticated || !spotifyAdapter || !window.Spotify || !window.spotifySDKReady) {
       return;
@@ -151,10 +180,10 @@ export function MusicProvider({ children }: MusicProviderProps) {
 
     const newPlayer = new window.Spotify.Player({
       name: 'Music App Player',
-      getOAuthToken: callback => {
+      getOAuthToken: (callback) => {
         callback(spotifyAdapter.getAccessToken());
       },
-      volume: 0.5
+      volume: 0.5,
     });
 
     const handleReady = ({ device_id }: { device_id: string }) => {
@@ -165,15 +194,15 @@ export function MusicProvider({ children }: MusicProviderProps) {
 
     const handleStateChange = (state: SpotifyPlayerState | null) => {
       if (!isMounted || !state) return;
-      
+
       setIsPlaying(!state.paused);
       setCurrentPosition(state.position);
-      
+
       if (state.track_window?.current_track) {
         const track = state.track_window.current_track;
         if (currentSong?.uri !== track.uri) {
           const songs = playlist.getAll();
-          const newCurrentSong = songs.find(song => song.uri === track.uri);
+          const newCurrentSong = songs.find((song) => song.uri === track.uri);
           if (newCurrentSong) {
             playlist.current = newCurrentSong;
             setCurrentSong(newCurrentSong);
@@ -186,10 +215,25 @@ export function MusicProvider({ children }: MusicProviderProps) {
     newPlayer.addListener('player_state_changed', handleStateChange);
     newPlayer.addListener('initialization_error', ({ message }) => {
       console.error('Failed to initialize:', message);
+      toast.error('Player initialization failed.');
     });
-    newPlayer.addListener('authentication_error', ({ message }) => {
+    newPlayer.addListener('authentication_error', async ({ message }) => {
       console.error('Failed to authenticate:', message);
-      setIsAuthenticated(false);
+      try {
+        await spotifyAdapter.refreshAccessToken();
+        localStorage.setItem(
+          TOKEN_STORAGE_KEY,
+          JSON.stringify({
+            accessToken: spotifyAdapter.getAccessToken(),
+            refreshToken: spotifyAdapter.getRefreshToken(),
+          })
+        );
+        await newPlayer.connect();
+      } catch (error) {
+        setIsAuthenticated(false);
+        localStorage.removeItem(TOKEN_STORAGE_KEY);
+        toast.error('Authentication failed. Please log in again.');
+      }
     });
 
     newPlayer.connect();
@@ -201,8 +245,12 @@ export function MusicProvider({ children }: MusicProviderProps) {
   }, [isAuthenticated, spotifyAdapter]);
 
   const addSong = async (data: SongData, strategy: AddStrategyType = 'end') => {
+    if (!spotifyAdapter) {
+      throw new Error("Se requiere autenticación con Spotify");
+    }
+
     if (strategy === 'afterCurrent' && !playlist.current) {
-      alert('Selecciona una canción primero para usar esta opción');
+      toast.warn('Select a song first to use this option.');
       return;
     }
 
@@ -224,32 +272,37 @@ export function MusicProvider({ children }: MusicProviderProps) {
       const addSongUseCase = new AddSongUseCase(
         playlist,
         strategyObj,
-        spotifyAdapter || new SpotifyAdapter('', '') // Provide both required tokens
+        spotifyAdapter
       );
 
       await addSongUseCase.execute(data.title, data.artist);
-      
+
       if (playlist.length === 1) {
         setCurrentSong(playlist.head);
       }
-      
+
       await persistenceAdapter.savePlaylist(playlist);
+      toast.success(`Added "${data.title}" to playlist!`);
     } catch (error) {
-      console.error("Error adding song:", error);
+      console.error('Error adding song:', error);
+      toast.error('Failed to add song.');
       throw error;
     }
   };
 
   const removeSong = async (id: string) => {
     try {
+      const songToRemove = playlist.getAll().find((song) => song.id === id);
       const removed = playlist.removeById(id);
-      
+
       if (removed) {
         setCurrentSong(playlist.current);
         await persistenceAdapter.savePlaylist(playlist);
+        toast.success(`Removed "${songToRemove?.title}" from playlist.`);
       }
     } catch (error) {
-      console.error("Error al eliminar canción:", error);
+      console.error('Error al eliminar canción:', error);
+      toast.error('Failed to remove song.');
       throw error;
     }
   };
@@ -260,10 +313,11 @@ export function MusicProvider({ children }: MusicProviderProps) {
     if (nextSong && player && spotifyAdapter) {
       try {
         await player.play({
-          uris: [nextSong.uri]
+          uris: [nextSong.uri],
         });
       } catch (error) {
         console.error('Error playing next song:', error);
+        toast.error('Failed to play next song.');
       }
     }
     await persistenceAdapter.savePlaylist(playlist);
@@ -275,10 +329,11 @@ export function MusicProvider({ children }: MusicProviderProps) {
     if (previousSong && player && spotifyAdapter) {
       try {
         await player.play({
-          uris: [previousSong.uri]
+          uris: [previousSong.uri],
         });
       } catch (error) {
         console.error('Error playing previous song:', error);
+        toast.error('Failed to play previous song.');
       }
     }
     await persistenceAdapter.savePlaylist(playlist);
@@ -293,10 +348,11 @@ export function MusicProvider({ children }: MusicProviderProps) {
         if (player && spotifyAdapter) {
           try {
             await player.play({
-              uris: [song.uri]
+              uris: [song.uri],
             });
           } catch (error) {
             console.error('Error playing song:', error);
+            toast.error('Failed to play song.');
           }
         }
         await persistenceAdapter.savePlaylist(playlist);
@@ -310,19 +366,20 @@ export function MusicProvider({ children }: MusicProviderProps) {
       setSearchResults([]);
       return;
     }
-    
+
     try {
       const results = await spotifyAdapter.searchTracks(query);
       setSearchResults(results);
     } catch (error) {
       console.error('Error en la búsqueda:', error);
+      toast.error('Search failed. Please try again.');
       setSearchResults([]);
     }
   };
 
   const togglePlayback = useCallback(async () => {
     if (!player || !currentSong) return;
-    
+
     try {
       const state = await player.getCurrentState();
       if (!state) {
@@ -336,6 +393,7 @@ export function MusicProvider({ children }: MusicProviderProps) {
       }
     } catch (error) {
       console.error('Playback error:', error);
+      toast.error('Playback error occurred.');
     }
   }, [player, currentSong]);
 
@@ -359,7 +417,7 @@ export function MusicProvider({ children }: MusicProviderProps) {
     isPlaying,
     togglePlayback,
     currentPosition,
-    player
+    player,
   };
 
   return (
