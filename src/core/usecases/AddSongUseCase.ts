@@ -17,15 +17,16 @@ export class AddSongUseCase {
     /**
      * Ejecuta el caso de uso
      */
-    async execute(title: string, artist: string, duration:number): Promise<SongNode> {
+    async execute(title: string, artist: string): Promise<SongNode> {
         try {
-            const coverURL = await this.metadataFetcher.fetchCover(title, artist);
+            const songInfo = await this.metadataFetcher.fetchSongInfo(title, artist);
 
             const node = SongFactory.createSong({
                 title,
                 artist,
-                duration,
-                coverURL
+                duration: songInfo.duration,
+                coverURL: songInfo.coverURL,
+                spotifyId: songInfo.spotifyId
             });
 
             this.strategy.add(node, this.playlist);

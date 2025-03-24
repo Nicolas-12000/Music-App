@@ -1,38 +1,46 @@
 import { SongNode, SongData } from "@/core/entities/SongNode";
 
 /**
- * Factoría para crear nodos de canciones con validaciones
+ * Factory for creating song nodes with validations
  */
 export class SongFactory {
     /**
-     * Crea un node de canción con validaciones
+     * Creates a song node with validations
      */
     static createSong(data: SongData): SongNode {
-        if (!data.title) {
+        if (!data.title?.trim()) {
             throw new Error("El título de la canción es requerido");
         }
 
-        if (!data.artist) {
+        if (!data.artist?.trim()) {
             throw new Error("El artista de la canción es requerido");
         }
 
+        if (!data.spotifyId?.trim()) {
+            throw new Error("El ID de Spotify es requerido");
+        }
+
+        if (!this.isValidUrl(data.coverURL)) {
+            throw new Error("La URL de la portada es inválida o falta");
+        }
+
         if (typeof data.duration !== "number" || data.duration <= 0) {
-            throw new Error("La duración de la canción debe ser un número mayor a 0");
+            throw new Error("La duración debe ser un número mayor a 0");
         }
 
         return new SongNode(data);
     }
 
     /**
-     * Crea un nodo de canción a partir de datos parciales,
-     * utilizando valores por defecto cuando sea necesraio
+     * Validates if a string is a valid URL
      */
-    static createDefaultSong(title: string, artist: string): SongNode {
-        return new SongNode({
-            title,
-            artist,
-            duration: 180, // 3 min
-            coverURL: "/placeholder-cover.jpg"
-        });
+    private static isValidUrl(url: string): boolean {
+        try {
+            new URL(url);
+            return true;
+        } catch {
+            return false;
+        }
     }
+
 }

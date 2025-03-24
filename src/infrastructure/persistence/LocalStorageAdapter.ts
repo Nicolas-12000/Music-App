@@ -9,7 +9,7 @@ export class LocalStorageAdapter implements IPersistence {
 
   async savePlaylist(playlist: Playlist): Promise<void> {
     try {
-      const jsonData = JSON.stringify(playlist);
+      const jsonData = JSON.stringify(playlist.toJson());
       localStorage.setItem(this.STORAGE_KEY, jsonData);
     } catch (error) {
       console.error("Error al guardar en localStorage:", error);

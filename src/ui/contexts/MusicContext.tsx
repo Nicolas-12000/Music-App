@@ -3,6 +3,7 @@ import { Playlist } from '@/core/entities/Playlist';
 import { SongNode, SongData } from '@/core/entities/SongNode';
 import { LocalStorageAdapter } from '@/infrastructure/persistence/LocalStorageAdapter';
 import { SpotifyAdapter } from '@/infrastructure/adapters/SpotifyAdapter';
+import { SpotifyAuthService } from '@/infrastructure/auth/SpotifyAuthService';
 import { AddSongUseCase } from '@/core/usecases/AddSongUseCase';
 import { LoadPlaylistUseCase } from '@/core/usecases/LoadPlaylistUseCase';
 import { AddToStart, AddToEnd, AddAfterCurrent } from '@/core/strategies/AddStrategies';
@@ -13,10 +14,14 @@ interface MusicContextType {
   playlist: Playlist;
   currentSong: SongNode | null;
   isLoading: boolean;
+  isAuthenticated: boolean;
+  isAuthenticating: boolean;
+  spotifyLogin: () => void;
+  handleSpotifyCallback: (code: string) => Promise<void>;
   addSong: (data: SongData, strategy?: AddStrategyType) => Promise<void>;
   removeSong: (id: string) => Promise<void>;
   next: () => Promise<void>;
-  previus: () => Promise<void>;
+  previous: () => Promise<void>;
   playById: (id: string) => void;
 }
 
@@ -30,9 +35,32 @@ export function MusicProvider({ children }: MusicProviderProps) {
   const [playlist] = useState<Playlist>(new Playlist());
   const [currentSong, setCurrentSong] = useState<SongNode | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [spotifyAdapter, setSpotifyAdapter] = useState<SpotifyAdapter | null>(null);
 
   const persistenceAdapter = new LocalStorageAdapter();
-  const metadataAdapter = new SpotifyAdapter();
+
+  const spotifyLogin = () => {
+    window.location.href = SpotifyAuthService.getAuthUrl();
+  };
+
+  const handleSpotifyCallback = async (code: string) => {
+    setIsAuthenticating(true);
+    try {
+      const tokenData = await SpotifyAuthService.getAccessToken(code);
+      setSpotifyAdapter(new SpotifyAdapter(
+        tokenData.access_token,
+        tokenData.refresh_token
+      ));
+      setIsAuthenticated(true);
+    } catch (error) {
+      console.error("Authentication failed:", error);
+      throw error;
+    } finally {
+      setIsAuthenticating(false);
+    }
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -75,10 +103,10 @@ export function MusicProvider({ children }: MusicProviderProps) {
       const addSongUseCase = new AddSongUseCase(
         playlist,
         strategyObj,
-        metadataAdapter
+        spotifyAdapter || new SpotifyAdapter('', '') // Provide both required tokens
       );
 
-      await addSongUseCase.execute(data.title, data.artist, data.duration);
+      await addSongUseCase.execute(data.title, data.artist);
       
       if (playlist.length === 1) {
         setCurrentSong(playlist.head);
@@ -86,7 +114,7 @@ export function MusicProvider({ children }: MusicProviderProps) {
       
       await persistenceAdapter.savePlaylist(playlist);
     } catch (error) {
-      console.error("Error al agregar canción:", error);
+      console.error("Error adding song:", error);
       throw error;
     }
   };
@@ -111,8 +139,8 @@ export function MusicProvider({ children }: MusicProviderProps) {
     await persistenceAdapter.savePlaylist(playlist);
   };
 
-  const previus = async () => {
-    const previousSong = playlist.previus();
+  const previous = async () => {
+    const previousSong = playlist.previous();
     setCurrentSong(previousSong);
     await persistenceAdapter.savePlaylist(playlist);
   };
@@ -133,10 +161,14 @@ export function MusicProvider({ children }: MusicProviderProps) {
     playlist,
     currentSong,
     isLoading,
+    isAuthenticated,
+    isAuthenticating,
+    spotifyLogin,
+    handleSpotifyCallback,
     addSong,
     removeSong,
     next,
-    previus,
+    previous,
     playById
   };
 

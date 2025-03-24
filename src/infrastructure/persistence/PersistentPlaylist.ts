@@ -59,8 +59,8 @@ export class PersistentPlaylist implements Playlist {
         return result;  
     }
 
-    previus(): SongNode | null {
-        const result = this.playlist.previus();
+    previous(): SongNode | null {
+        const result = this.playlist.previous();
         this.persist();
         return result;
     }

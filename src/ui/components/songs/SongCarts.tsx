@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useMusicContext } from '@/ui/contexts/MusicContext';
 import { theme } from '@/ui/themes/theme';
 import { SongNode } from '@/core/entities/SongNode';
+import { FaHeart, FaTrash, FaPlay, FaPause } from 'react-icons/fa';
 
 interface SongCardProps {
   song: SongNode;
@@ -57,7 +58,7 @@ export function SongCard({ song, isPlaying = false }: SongCardProps) {
         {/* Cover */}
         <div className="flex-shrink-0 w-16 h-16 rounded overflow-hidden mr-4">
           <img 
-            src={song.coverURL || '/default-album-cover.png'} 
+            src={song.coverURL} 
             alt={`Cover of ${song.title}`}
             className="w-full h-full object-cover"
           />
@@ -84,7 +85,7 @@ export function SongCard({ song, isPlaying = false }: SongCardProps) {
             }}
             aria-label="Add to favorites"
           >
-            ❤️
+            <FaHeart aria-hidden="true" />
           </motion.button>
 
           <motion.button
@@ -97,7 +98,7 @@ export function SongCard({ song, isPlaying = false }: SongCardProps) {
             }}
             aria-label="Delete song"
           >
-            🗑️
+            <FaTrash aria-hidden="true" />
           </motion.button>
 
           <motion.button
@@ -111,9 +112,9 @@ export function SongCard({ song, isPlaying = false }: SongCardProps) {
             aria-label={isPlaying ? "Pause" : "Play"}
           >
             {isPlaying ? (
-              <span className="block w-5 h-5">⏸️</span>
+              <FaPause aria-hidden="true" />
             ) : (
-              <span className="block w-5 h-5">▶️</span>
+              <FaPlay aria-hidden="true" />
             )}
           </motion.button>
         </div>

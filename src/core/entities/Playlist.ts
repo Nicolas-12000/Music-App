@@ -130,7 +130,7 @@ export class Playlist {
     /**
      * Retrocede al nodo anterior
      */
-    previus(): SongNode | null {
+    previous(): SongNode | null {
       if (!this.current || !this.current.prev){
         return this.current;
       }

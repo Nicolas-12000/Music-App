@@ -3,20 +3,33 @@
     "target": "ES2020",
     "module": "ESNext",
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
-    "moduleResolution": "Bundler",
+    
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    
+    /* Path aliases */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@spotify/*": ["node_modules/@spotify/*"]
+    },
+    
+    /* Linting */
     "strict": true,
-    "skipLibCheck": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "jsx": "react-jsx",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
+    
+    /* Additional existing settings */
+    "skipLibCheck": true,
     "esModuleInterop": true,
-    "paths": {
-      "@/*": ["./src/*"]
-    },
-    "types": ["vite/client", "jest"]
+    "types": ["vite/client", "jest"],
+    "typeRoots": ["./node_modules/@types", "./node_modules/@spotify"]
   },
   "include": ["src", "vite.config.ts", "tests"],
   "exclude": ["node_modules", "dist"]
