@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Playlist } from '@/core/entities/Playlist';
 import { SongNode, SongData } from '@/core/entities/SongNode';
 import { LocalStorageAdapter } from '@/infrastructure/persistence/LocalStorageAdapter';
@@ -8,6 +8,45 @@ import { AddSongUseCase } from '@/core/usecases/AddSongUseCase';
 import { LoadPlaylistUseCase } from '@/core/usecases/LoadPlaylistUseCase';
 import { AddToStart, AddToEnd, AddAfterCurrent } from '@/core/strategies/AddStrategies';
 import { SearchResultTrack } from '@/core/ports/IMetadataFetcher';
+
+// Improved Spotify types
+interface SpotifyPlayerConfig {
+  name: string;
+  getOAuthToken: (callback: (token: string) => void) => void;
+  volume: number;
+}
+
+interface SpotifyPlayerState {
+  paused: boolean;
+  position: number;
+  track_window?: {
+    current_track: {
+      uri: string;
+      id: string;
+      name: string;
+    };
+  };
+}
+
+interface SpotifyPlayer {
+  addListener: (eventName: string, callback: (data: any) => void) => void;
+  removeListener: (eventName: string, callback: Function) => void;
+  connect: () => Promise<boolean>;
+  disconnect: () => void;
+  getCurrentState: () => Promise<SpotifyPlayerState | null>;
+  play: (options?: { uris: string[] }) => Promise<void>;
+  pause: () => Promise<void>;
+  resume: () => Promise<void>;
+}
+
+declare global {
+  interface Window {
+    Spotify: {
+      Player: new (config: SpotifyPlayerConfig) => SpotifyPlayer;
+    };
+    spotifySDKReady: boolean;
+  }
+}
 
 export type AddStrategyType = 'start' | 'end' | 'afterCurrent';
 
@@ -28,6 +67,10 @@ interface MusicContextType {
   handleSearch: (query: string) => Promise<void>;
   setSearchResults: (results: SearchResultTrack[]) => void;
   spotifyAdapter: SpotifyAdapter | null;
+  isPlaying: boolean;
+  togglePlayback: () => Promise<void>;
+  currentPosition: number;
+  player: any | null;
 }
 
 const MusicContext = createContext<MusicContextType | undefined>(undefined);
@@ -44,6 +87,9 @@ export function MusicProvider({ children }: MusicProviderProps) {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [spotifyAdapter, setSpotifyAdapter] = useState<SpotifyAdapter | null>(null);
   const [searchResults, setSearchResults] = useState<SearchResultTrack[]>([]);
+  const [player, setPlayer] = useState<SpotifyPlayer | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentPosition, setCurrentPosition] = useState(0);
 
   const persistenceAdapter = new LocalStorageAdapter();
 
@@ -87,7 +133,71 @@ export function MusicProvider({ children }: MusicProviderProps) {
     loadData();
   }, [playlist]);
 
+  // Initialize Spotify player
+  useEffect(() => {
+    if (!isAuthenticated || !spotifyAdapter || !window.Spotify || !window.spotifySDKReady) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const newPlayer = new window.Spotify.Player({
+      name: 'Music App Player',
+      getOAuthToken: callback => {
+        callback(spotifyAdapter.getAccessToken());
+      },
+      volume: 0.5
+    });
+
+    const handleReady = ({ device_id }: { device_id: string }) => {
+      if (!isMounted) return;
+      console.log('Ready with Device ID', device_id);
+      setPlayer(newPlayer);
+    };
+
+    const handleStateChange = (state: SpotifyPlayerState | null) => {
+      if (!isMounted || !state) return;
+      
+      setIsPlaying(!state.paused);
+      setCurrentPosition(state.position);
+      
+      if (state.track_window?.current_track) {
+        const track = state.track_window.current_track;
+        if (currentSong?.uri !== track.uri) {
+          const songs = playlist.getAll();
+          const newCurrentSong = songs.find(song => song.uri === track.uri);
+          if (newCurrentSong) {
+            playlist.current = newCurrentSong;
+            setCurrentSong(newCurrentSong);
+          }
+        }
+      }
+    };
+
+    newPlayer.addListener('ready', handleReady);
+    newPlayer.addListener('player_state_changed', handleStateChange);
+    newPlayer.addListener('initialization_error', ({ message }) => {
+      console.error('Failed to initialize:', message);
+    });
+    newPlayer.addListener('authentication_error', ({ message }) => {
+      console.error('Failed to authenticate:', message);
+      setIsAuthenticated(false);
+    });
+
+    newPlayer.connect();
+
+    return () => {
+      isMounted = false;
+      newPlayer.disconnect();
+    };
+  }, [isAuthenticated, spotifyAdapter]);
+
   const addSong = async (data: SongData, strategy: AddStrategyType = 'end') => {
+    if (strategy === 'afterCurrent' && !playlist.current) {
+      alert('Selecciona una canción primero para usar esta opción');
+      return;
+    }
+
     try {
       let strategyObj;
       switch (strategy) {
@@ -139,22 +249,49 @@ export function MusicProvider({ children }: MusicProviderProps) {
   const next = async () => {
     const nextSong = playlist.next();
     setCurrentSong(nextSong);
+    if (nextSong && player && spotifyAdapter) {
+      try {
+        await player.play({
+          uris: [nextSong.uri]
+        });
+      } catch (error) {
+        console.error('Error playing next song:', error);
+      }
+    }
     await persistenceAdapter.savePlaylist(playlist);
   };
 
   const previous = async () => {
     const previousSong = playlist.previous();
     setCurrentSong(previousSong);
+    if (previousSong && player && spotifyAdapter) {
+      try {
+        await player.play({
+          uris: [previousSong.uri]
+        });
+      } catch (error) {
+        console.error('Error playing previous song:', error);
+      }
+    }
     await persistenceAdapter.savePlaylist(playlist);
   };
 
-  const playById = (id: string) => {
+  const playById = async (id: string) => {
     const songs = playlist.getAll();
     for (const song of songs) {
       if (song.id === id) {
         playlist.current = song;
         setCurrentSong(song);
-        persistenceAdapter.savePlaylist(playlist);
+        if (player && spotifyAdapter) {
+          try {
+            await player.play({
+              uris: [song.uri]
+            });
+          } catch (error) {
+            console.error('Error playing song:', error);
+          }
+        }
+        await persistenceAdapter.savePlaylist(playlist);
         break;
       }
     }
@@ -175,6 +312,25 @@ export function MusicProvider({ children }: MusicProviderProps) {
     }
   };
 
+  const togglePlayback = useCallback(async () => {
+    if (!player || !currentSong) return;
+    
+    try {
+      const state = await player.getCurrentState();
+      if (!state) {
+        await player.play({ uris: [currentSong.uri] });
+      } else {
+        if (state.paused) {
+          await player.resume();
+        } else {
+          await player.pause();
+        }
+      }
+    } catch (error) {
+      console.error('Playback error:', error);
+    }
+  }, [player, currentSong]);
+
   const value: MusicContextType = {
     playlist,
     currentSong,
@@ -191,7 +347,11 @@ export function MusicProvider({ children }: MusicProviderProps) {
     searchResults,
     handleSearch,
     setSearchResults,
-    spotifyAdapter
+    spotifyAdapter,
+    isPlaying,
+    togglePlayback,
+    currentPosition,
+    player
   };
 
   return (

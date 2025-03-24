@@ -5,9 +5,10 @@ export const theme = {
   colors: {
     background: '#0a0a0a',
     surface: '#1a1a1a',
-    primary: '#3fa9f5',
+    primary: '#3fa9f5',  // Color de la barra de progreso
     accent: '#6b5df5',
-    text: 'rgba(255, 255, 255, 0.87)',
+    error: '#ff4444',
+    text: '#e0e0e0',      // Color de texto
     textSecondary: 'rgba(255, 255, 255, 0.6)'
   },
   spacing: {
@@ -21,8 +22,7 @@ export const theme = {
     large: '16px'
   },
   shadows: {
-    card: '0 4px 6px rgba(0, 0, 0, 0.1)',
-    elevated: '0 8px 16px rgba(0, 0, 0, 0.2)'
+    card: '0 2px 4px rgba(0,0,0,0.2)'
   }
 }
 

@@ -37,5 +37,6 @@ export class AddAfterCurrent implements AddStrategy {
     }
 
     playlist.current.next = node;
+    playlist.length++; // Incrementar la longitud de la lista
   }
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 import { SearchBar } from './SearchBar';
 import { SearchResults } from './SearchResults';
@@ -13,6 +13,7 @@ const AppContainer = styled.div`
 
 export const MusicApp: React.FC = () => {
     const { searchResults, addSong } = useMusicContext();
+    const [strategy, setStrategy] = useState<'start' | 'end' | 'afterCurrent'>('end');
 
     const handleSelectTrack = (track: SearchResultTrack): void => {
         const songData: SongData = {
@@ -24,12 +25,20 @@ export const MusicApp: React.FC = () => {
             albumName: track.album.name,
             spotifyId: track.id 
         };
-        addSong(songData);
+        addSong(songData, strategy);
     };
 
     return (
         <AppContainer>
             <SearchBar />
+            <div>
+                <label>Insertar canción en:</label>
+                <select onChange={(e) => setStrategy(e.target.value as 'start' | 'end' | 'afterCurrent')}>
+                    <option value="start">Inicio</option>
+                    <option value="end">Final</option>
+                    <option value="afterCurrent">Después de la actual</option>
+                </select>
+            </div>
             <SearchResults 
                 results={searchResults} 
                 onSelectTrack={handleSelectTrack}

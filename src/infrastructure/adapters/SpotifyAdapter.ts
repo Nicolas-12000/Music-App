@@ -1,6 +1,8 @@
 import axios from 'axios';
 import { IMetadataFetcher, SearchResultTrack, SongMetadata } from "@/core/ports/IMetadataFetcher";
 import { SpotifyAuthService } from '@/infrastructure/auth/SpotifyAuthService';
+import { SongFactory } from '@/infrastructure/factories/SongFactory';
+import { SongData } from '@/core/entities/SongNode';
 
 // ========================
 // Error de clases
@@ -55,6 +57,19 @@ interface SpotifyTrack {
 interface SpotifySearchResponse {
     tracks: {
         items: SpotifyTrack[];
+    };
+}
+
+interface PlaybackState {
+    is_playing: boolean;
+    progress_ms: number;
+    item?: {
+        id: string;
+        uri: string;
+    };
+    device?: {
+        id: string;
+        is_active: boolean;
     };
 }
 
@@ -237,27 +252,44 @@ export class SpotifyAdapter implements IMetadataFetcher {
                 return [];
             }
     
-            // Mapeo correcto asegurando que los tipos coincidan
-            return data.tracks.items.map(track => ({
-                id: track.id,
-                name: track.name,
-                duration_ms: track.duration_ms,
-                artists: track.artists.map(artist => ({
-                    name: artist.name
-                })),
-                album: {
-                    name: track.album.name,
-                    images: track.album.images.map(image => ({
-                        url: image.url,
-                        height: image.height,
-                        width: image.width
-                    }))
+            return data.tracks.items.map(track => {
+                const songData: SongData = {
+                    spotifyId: track.id,
+                    title: track.name,
+                    artist: track.artists[0]?.name || 'Unknown Artist',
+                    duration: Math.floor(track.duration_ms / 1000),
+                    coverURL: track.album.images[0]?.url || '',
+                    uri: `spotify:track:${track.id}`
+                };
+
+                try {
+                    // Validate and create the song using the factory
+                    SongFactory.createSong(songData);
+                    return {
+                        id: track.id,
+                        name: track.name,
+                        duration_ms: track.duration_ms,
+                        artists: track.artists.map(artist => ({
+                            name: artist.name
+                        })),
+                        album: {
+                            name: track.album.name,
+                            images: track.album.images.map(image => ({
+                                url: image.url,
+                                height: image.height,
+                                width: image.width
+                            }))
+                        }
+                    };
+                } catch (error) {
+                    console.warn(`Skipping invalid track ${track.id}:`, error);
+                    return null;
                 }
-            }));
+            }).filter(Boolean) as SearchResultTrack[];
         } catch (error) {
-            console.error('Error buscando canciones:', error);
+            console.error('Error searching tracks:', error);
             throw new SpotifyApiError(
-                'Error al buscar canciones',
+                'Failed to search tracks',
                 error instanceof Error ? undefined : (error as any).response?.status,
                 'search'
             );
@@ -272,5 +304,48 @@ export class SpotifyAdapter implements IMetadataFetcher {
             const message = error instanceof Error ? error.message : 'Unknown initialization error';
             throw new SpotifyAuthError(`Initialization failed: ${message}`);
         }
+    }
+
+    async playTrack(spotifyId: string, deviceId?: string): Promise<void> {
+        try {
+            const endpoint = 'me/player/play';
+            const body = {
+                uris: [`spotify:track:${spotifyId}`]
+            };
+
+            const options = {
+                headers: {
+                    'Authorization': `Bearer ${this.accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                params: deviceId ? { device_id: deviceId } : undefined
+            };
+
+            await axios.put(`https://api.spotify.com/v1/${endpoint}`, body, options);
+        } catch (error: any) {
+            const response = error.response;
+            
+            if (response?.status === 404) {
+                throw new SpotifyApiError(
+                    "No active device found. Please open Spotify on a device first.",
+                    404,
+                    'play'
+                );
+            }
+
+            throw new SpotifyApiError(
+                "Failed to play track",
+                response?.status,
+                'play'
+            );
+        }
+    }
+
+    async getCurrentPlayback(): Promise<PlaybackState> {
+        return this.makeRequest('me/player');
+    }
+
+    getAccessToken(): string {
+        return this.accessToken;
     }
 }

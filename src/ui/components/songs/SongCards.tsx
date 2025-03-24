@@ -11,7 +11,7 @@ interface SongCardProps {
 }
 
 export function SongCard({ song, isPlaying = false }: SongCardProps) {
-  const { playById, removeSong } = useMusicContext();
+  const { playById, removeSong, togglePlayback, currentSong } = useMusicContext();
   const [isHovered, setIsHovered] = useState(false);
 
   const formatDuration = (seconds: number) => {
@@ -39,23 +39,36 @@ export function SongCard({ song, isPlaying = false }: SongCardProps) {
     }
   };
 
+  const handlePlayback = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (currentSong?.id === song.id) {
+      togglePlayback();
+    } else {
+      playById(song.id);
+    }
+  };
+
+  const isCurrentlyPlaying = isPlaying && currentSong?.id === song.id;
+
   return (
     <motion.div 
-      className={`w-full max-w-md rounded-lg overflow-hidden bg-background mb-4 cursor-pointer ${isHovered ? 'hovered' : ''}`}
+      className={`w-full max-w-md rounded-lg overflow-hidden bg-background mb-4 cursor-pointer ${
+        isHovered ? 'hovered' : ''
+      }`}
       style={{ 
-        border: isPlaying ? `1px solid ${theme.colors.buttons}` : '1px solid transparent',
+        border: isCurrentlyPlaying ? `1px solid ${theme.colors.primary}` : '1px solid transparent',
         boxShadow: theme.shadows.card 
       }}
       variants={cardVariants}
       initial="initial"
       whileHover="hover"
       whileTap="tap"
-      animate={isPlaying ? "playing" : "initial"}
+      animate={isCurrentlyPlaying ? "playing" : "initial"}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="flex items-center p-3">
-        {/* Cover */}
+        {/* Cover image */}
         <div className="flex-shrink-0 w-16 h-16 rounded overflow-hidden mr-4">
           <img 
             src={song.coverURL} 
@@ -68,7 +81,7 @@ export function SongCard({ song, isPlaying = false }: SongCardProps) {
         <div className="flex-grow">
           <h3 className="text-text font-semibold truncate">{song.title}</h3>
           <p className="text-textSecondary text-sm truncate">{song.artist}</p>
-          <p className="text-buttons text-xs mt-1">
+          <p className="text-primary text-xs mt-1">
             {formatDuration(song.duration)}
           </p>
         </div>
@@ -78,10 +91,10 @@ export function SongCard({ song, isPlaying = false }: SongCardProps) {
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            className="text-accents hover:text-[#d8a742] transition-colors"
+            className="text-accent hover:text-[#d8a742] transition-colors"
             onClick={(e) => {
               e.stopPropagation();
-              // Favorite logic (pending)
+              // Favorite logic here
             }}
             aria-label="Add to favorites"
           >
@@ -104,14 +117,11 @@ export function SongCard({ song, isPlaying = false }: SongCardProps) {
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            className="p-2 rounded-full bg-buttons hover:bg-[#2d8fd6] transition-colors"
-            onClick={(e) => {
-              e.stopPropagation();
-              playById(song.id);
-            }}
-            aria-label={isPlaying ? "Pause" : "Play"}
+            className="p-2 rounded-full bg-primary hover:bg-[#2d8fd6] transition-colors"
+            onClick={handlePlayback}
+            aria-label={isCurrentlyPlaying ? "Pause" : "Play"}
           >
-            {isPlaying ? (
+            {isCurrentlyPlaying ? (
               <FaPause aria-hidden="true" />
             ) : (
               <FaPlay aria-hidden="true" />

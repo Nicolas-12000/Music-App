@@ -15,16 +15,24 @@ export class SpotifyAuthService {
     private static readonly CLIENT_SECRET = import.meta.env.VITE_SPOTIFY_CLIENT_SECRET;
     private static readonly REDIRECT_URI = import.meta.env.VITE_SPOTIFY_REDIRECT_URI;
     private static readonly TOKEN_URL = 'https://accounts.spotify.com/api/token';
+    private static readonly SCOPES = [
+        'streaming',
+        'user-read-email',
+        'user-read-private',
+        'user-read-playback-state',
+        'user-modify-playback-state',
+        'user-read-currently-playing'
+    ].join(' ');
 
     /**
      * Obtiene la URL de autorización de Spotify
      */
-    static getAuthUrl(scopes: string[] = ['user-read-private']): string {
+    static getAuthUrl(): string {
         const params = new URLSearchParams({
             client_id: this.CLIENT_ID,
             response_type: 'code',
             redirect_uri: this.REDIRECT_URI,
-            scope: scopes.join(' '),
+            scope: this.SCOPES,
             show_dialog: 'true'
         });
         return `${this.SPOTIFY_AUTH_URL}?${params.toString()}`;

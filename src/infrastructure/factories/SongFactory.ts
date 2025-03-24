@@ -1,4 +1,4 @@
-import { SongNode, SongData } from "@/core/entities/SongNode";
+import { SongData, SongNode } from "@/core/entities/SongNode";
 
 /**
  * Factory for creating song nodes with validations
@@ -8,39 +8,40 @@ export class SongFactory {
      * Creates a song node with validations
      */
     static createSong(data: SongData): SongNode {
-        if (!data.title?.trim()) {
-            throw new Error("El título de la canción es requerido");
-        }
-
-        if (!data.artist?.trim()) {
-            throw new Error("El artista de la canción es requerido");
-        }
-
-        if (!data.spotifyId?.trim()) {
-            throw new Error("El ID de Spotify es requerido");
-        }
-
-        if (!this.isValidUrl(data.coverURL)) {
-            throw new Error("La URL de la portada es inválida o falta");
-        }
-
-        if (typeof data.duration !== "number" || data.duration <= 0) {
-            throw new Error("La duración debe ser un número mayor a 0");
-        }
-
+        this.validateSongData(data);
         return new SongNode(data);
     }
 
     /**
-     * Validates if a string is a valid URL
+     * Validates all required fields in song data
      */
-    private static isValidUrl(url: string): boolean {
-        try {
-            new URL(url);
-            return true;
-        } catch {
-            return false;
+    private static validateSongData(data: SongData): void {
+        const validations = [
+            {
+                condition: !data.spotifyId?.trim(),
+                message: "Spotify ID is required for song creation"
+            },
+            {
+                condition: !data.title?.trim(),
+                message: "Song title is required"
+            },
+            {
+                condition: !data.artist?.trim(),
+                message: "Artist name is required"
+            },
+            {
+                condition: !data.coverURL?.trim(),
+                message: "Cover URL is required"
+            },
+            {
+                condition: typeof data.duration !== 'number' || data.duration <= 0,
+                message: "Valid duration is required"
+            }
+        ];
+
+        const failure = validations.find(v => v.condition);
+        if (failure) {
+            throw new Error(failure.message);
         }
     }
-
 }

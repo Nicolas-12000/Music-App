@@ -18,8 +18,18 @@ module.exports = {
       },
       animation: {
         'card-hover': 'hover 0.2s ease-in-out',
+      },
+      keyframes: {
+        hover: {
+          '0%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-5px)' },
+          '100%': { transform: 'translateY(0)' }
+        }
       }
     },
   },
-  plugins: []
+  plugins: [
+    require('@tailwindcss/forms'),
+    require('@tailwindcss/typography')
+  ]
 }
