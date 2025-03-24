@@ -70,7 +70,7 @@ interface MusicContextType {
   isPlaying: boolean;
   togglePlayback: () => Promise<void>;
   currentPosition: number;
-  player: any | null;
+  player: SpotifyPlayer | null;
 }
 
 const MusicContext = createContext<MusicContextType | undefined>(undefined);
@@ -93,8 +93,16 @@ export function MusicProvider({ children }: MusicProviderProps) {
 
   const persistenceAdapter = new LocalStorageAdapter();
 
+  const generateState = () => {
+    const state = crypto.randomUUID();
+    localStorage.setItem('spotify_auth_state', state);
+    return state;
+  };
+
   const spotifyLogin = () => {
-    window.location.href = SpotifyAuthService.getAuthUrl();
+    const state = generateState();
+    const authUrl = SpotifyAuthService.getAuthUrl(state);
+    window.location.href = authUrl;
   };
 
   const handleSpotifyCallback = async (code: string) => {

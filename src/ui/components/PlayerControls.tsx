@@ -44,30 +44,30 @@ export const PlayerControls = () => {
       <div className="flex justify-center items-center space-x-6">
         <button
           onClick={previous}
-          className="p-3 rounded-full bg-buttons hover:bg-[#2d8fd6] transition-colors"
-          aria-label="Previous song"
+          className="p-3 rounded-full bg-primary/20 hover:bg-primary/30 transition-colors"
+          aria-label="Canción anterior"
         >
           ⏮
         </button>
 
         <button
           onClick={togglePlayback}
-          className="p-4 rounded-full bg-buttons hover:bg-[#2d8fd6] transition-colors"
-          aria-label={isPlaying ? "Pause" : "Play"}
+          className="p-4 rounded-full bg-primary/20 hover:bg-primary/30 transition-colors"
+          aria-label={isPlaying ? "Pausar" : "Reproducir"}
         >
           {isPlaying ? '⏸' : '▶'}
         </button>
 
         <button
           onClick={next}
-          className="p-3 rounded-full bg-buttons hover:bg-[#2d8fd6] transition-colors"
-          aria-label="Next song"
+          className="p-3 rounded-full bg-primary/20 hover:bg-primary/30 transition-colors"
+          aria-label="Siguiente canción"
         >
           ⏭
         </button>
       </div>
 
-      {/* Info de la Canción */}
+      {/* Información de la Canción */}
       {currentSong && (
         <p className="text-center text-text font-medium truncate">
           {currentSong.title} - {currentSong.artist}

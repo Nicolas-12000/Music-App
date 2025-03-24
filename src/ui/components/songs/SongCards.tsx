@@ -68,16 +68,16 @@ export function SongCard({ song, isPlaying = false }: SongCardProps) {
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="flex items-center p-3">
-        {/* Cover image */}
+        {/* Imagen de portada */}
         <div className="flex-shrink-0 w-16 h-16 rounded overflow-hidden mr-4">
           <img 
             src={song.coverURL} 
-            alt={`Cover of ${song.title}`}
+            alt={`Portada de ${song.title}`}
             className="w-full h-full object-cover"
           />
         </div>
 
-        {/* Song Info */}
+        {/* Información de la canción */}
         <div className="flex-grow">
           <h3 className="text-text font-semibold truncate">{song.title}</h3>
           <p className="text-textSecondary text-sm truncate">{song.artist}</p>
@@ -86,7 +86,7 @@ export function SongCard({ song, isPlaying = false }: SongCardProps) {
           </p>
         </div>
 
-        {/* Action Buttons */}
+        {/* Botones de acción */}
         <div className="flex items-center space-x-3 ml-4">
           <motion.button
             whileHover={{ scale: 1.1 }}
@@ -94,9 +94,9 @@ export function SongCard({ song, isPlaying = false }: SongCardProps) {
             className="text-accent hover:text-[#d8a742] transition-colors"
             onClick={(e) => {
               e.stopPropagation();
-              // Favorite logic here
+              // Lógica para agregar a favoritos
             }}
-            aria-label="Add to favorites"
+            aria-label="Agregar a favoritos"
           >
             <FaHeart aria-hidden="true" />
           </motion.button>
@@ -109,7 +109,7 @@ export function SongCard({ song, isPlaying = false }: SongCardProps) {
               e.stopPropagation();
               removeSong(song.id);
             }}
-            aria-label="Delete song"
+            aria-label="Eliminar canción"
           >
             <FaTrash aria-hidden="true" />
           </motion.button>
@@ -119,7 +119,7 @@ export function SongCard({ song, isPlaying = false }: SongCardProps) {
             whileTap={{ scale: 0.9 }}
             className="p-2 rounded-full bg-primary hover:bg-[#2d8fd6] transition-colors"
             onClick={handlePlayback}
-            aria-label={isCurrentlyPlaying ? "Pause" : "Play"}
+            aria-label={isCurrentlyPlaying ? "Pausar" : "Reproducir"}
           >
             {isCurrentlyPlaying ? (
               <FaPause aria-hidden="true" />
