@@ -105,8 +105,18 @@ export class SpotifyAuthService {
     }
   }
 
-  // Obtención de tokens
-  public async getTokens(code: string): Promise<SpotifyTokenResponse> {
+  // Obtención de tokens (proxy estático)
+  public static async getTokens(code: string): Promise<SpotifyTokenResponse> {
+    return SpotifyAuthService.getInstance()._getTokens(code); // Llama al método de instancia
+  }
+
+  // Refresh de tokens (proxy estático)
+  public static async refreshToken(refreshToken: string): Promise<SpotifyTokenResponse> {
+    return SpotifyAuthService.getInstance()._refreshToken(refreshToken); // Llama al método de instancia
+  }
+
+  // Obtención de tokens (método de instancia renombrado)
+  private async _getTokens(code: string): Promise<SpotifyTokenResponse> {
     try {
       const data = new URLSearchParams({
         grant_type: 'authorization_code',
@@ -142,8 +152,8 @@ export class SpotifyAuthService {
     }
   }
 
-  // Refresh de tokens
-  public async refreshToken(refreshToken: string): Promise<SpotifyTokenResponse> {
+  // Refresh de tokens (método de instancia renombrado)
+  private async _refreshToken(refreshToken: string): Promise<SpotifyTokenResponse> {
     if (!refreshToken) {
       throw new SpotifyAuthError('No refresh token available');
     }

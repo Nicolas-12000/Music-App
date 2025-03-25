@@ -82,26 +82,11 @@ interface MusicProviderProps {
 
 const TOKEN_STORAGE_KEY = 'spotify_tokens';
 
-/**
- * Genera o reutiliza el state de autenticación con timestamp.
- * Solo genera uno nuevo si no existe o si ha expirado (más de 5 minutos).
- */
 const generateState = () => {
-  const existing = localStorage.getItem('spotify_auth_state');
-  if (existing) {
-    try {
-      const parsed = JSON.parse(existing);
-      if (Date.now() - parsed.timestamp < 300000) { // 5 minutos
-        return parsed.value;
-      }
-    } catch (error) {
-      // Si hay error al parsear, se genera uno nuevo
-    }
-  }
   const newState = crypto.randomUUID();
   localStorage.setItem('spotify_auth_state', JSON.stringify({
     value: newState,
-    timestamp: Date.now()
+    timestamp: Date.now() // Guardar timestamp actual
   }));
   return newState;
 };
@@ -120,46 +105,44 @@ export function MusicProvider({ children }: MusicProviderProps) {
 
   const persistenceAdapter = new LocalStorageAdapter();
 
-  function spotifyLogin() {
+  // En la función spotifyLogin
+  const spotifyLogin = () => {
     const state = crypto.randomUUID();
-    console.log("Generando state:", state);
-    console.log("Guardado en localStorage:", localStorage.getItem("spotify_auth_state"));
-  
+    // Guardar como objeto con timestamp
     localStorage.setItem('spotify_auth_state', JSON.stringify({
       value: state,
       timestamp: Date.now()
     }));
-  
+
     const authService = SpotifyAuthService.getInstance();
     const authUrl = authService.getAuthUrl(state);
-  
     window.location.href = authUrl;
-  }
-  
+  };
+
   const handleSpotifyCallback = async (code: string | undefined) => {
     setIsAuthenticating(true);
     try {
       if (!code) {
         throw new Error('Código de autorización faltante');
       }
-  
+
       const storedStateData = localStorage.getItem('spotify_auth_state');
       if (!storedStateData) {
         throw new Error('Estado de autenticación no encontrado');
       }
-  
+
       const { value: savedState, timestamp } = JSON.parse(storedStateData);
-  
+
       if (Date.now() - timestamp > 5 * 60 * 1000) {
         throw new Error('El estado de autenticación ha expirado');
       }
-  
+
       localStorage.removeItem('spotify_auth_state');
-  
+
       const adapter = await SpotifyAdapter.initialize(code);
       setSpotifyAdapter(adapter);
       setIsAuthenticated(true);
-  
+
       localStorage.setItem(
         TOKEN_STORAGE_KEY,
         JSON.stringify({
@@ -168,7 +151,7 @@ export function MusicProvider({ children }: MusicProviderProps) {
           timestamp: Date.now()
         })
       );
-  
+
       toast.success('Conectado exitosamente a Spotify!');
     } catch (error) {
       console.error('Error de autenticación:', error);
@@ -184,41 +167,31 @@ export function MusicProvider({ children }: MusicProviderProps) {
     }
   };
 
-  useEffect(() => {
-    async function initialize() {
-      try {
-        const storedTokens = localStorage.getItem(TOKEN_STORAGE_KEY);
-        if (storedTokens) {
-          const { accessToken, refreshToken } = JSON.parse(storedTokens);
-          const adapter = new SpotifyAdapter(accessToken, refreshToken);
-          setSpotifyAdapter(adapter);
-          setIsAuthenticated(true);
-
-          try {
-            await adapter.getCurrentPlayback();
-          } catch (error) {
-            setIsAuthenticated(false);
-            localStorage.removeItem(TOKEN_STORAGE_KEY);
-            toast.warn('Session expired. Please log in again.');
-          }
+// En MusicContext.tsx - useEffect de inicialización
+useEffect(() => {
+  async function initialize() {
+    const storedTokens = localStorage.getItem(TOKEN_STORAGE_KEY);
+    if (storedTokens) {
+      const { accessToken, refreshToken, timestamp } = JSON.parse(storedTokens);
+      
+      // Verificar si el token está a punto de expirar (ej: 5 minutos antes)
+      if (Date.now() - timestamp > 3300000) { // 55 minutos
+        try {
+          const newTokens = await SpotifyAuthService.refreshToken(refreshToken);
+          localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify({
+            accessToken: newTokens.access_token,
+            refreshToken: newTokens.refresh_token || refreshToken,
+            timestamp: Date.now()
+          }));
+        } catch (error) {
+          localStorage.removeItem(TOKEN_STORAGE_KEY);
+          setIsAuthenticated(false);
         }
-
-        const loadPlaylistUseCase = new LoadPlaylistUseCase(persistenceAdapter);
-        const savedPlaylist = await loadPlaylistUseCase.execute();
-        playlist.head = savedPlaylist.head;
-        playlist.tail = savedPlaylist.tail;
-        playlist.current = savedPlaylist.current;
-        playlist.length = savedPlaylist.length;
-        setCurrentSong(savedPlaylist.current);
-      } catch (error) {
-        console.error('Error al inicializar datos:', error);
-        toast.error('Failed to load your data. Starting fresh.');
-      } finally {
-        setIsLoading(false);
       }
     }
-    initialize();
-  }, [playlist]);
+  }
+  initialize();
+}, [Playlist]);
 
   useEffect(() => {
     if (!isAuthenticated || !spotifyAdapter || !window.Spotify || !window.spotifySDKReady) {

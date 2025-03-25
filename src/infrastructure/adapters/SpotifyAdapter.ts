@@ -70,6 +70,8 @@ interface PlaybackState {
   };
 }
 
+const TOKEN_STORAGE_KEY = 'spotify_tokens';
+
 // ========================
 // Adapter Implementation
 // ========================
@@ -99,8 +101,18 @@ export class SpotifyAdapter implements IMetadataFetcher {
       return response.data;
     } catch (error: any) {
       const response = error.response;
-
-      // Handle rate limiting
+  
+      if (response?.status === 401) {
+        try {
+          await this.refreshAccessToken(); // Ahora actualiza localStorage también
+          return this.makeRequest(endpoint, params); // Reintentar con el nuevo token
+        } catch (refreshError) {
+          localStorage.removeItem(TOKEN_STORAGE_KEY);
+          window.location.href = '/login'; // Redirigir a login
+          throw new SpotifyAuthError('Sesión expirada. Por favor inicia sesión nuevamente.');
+        }
+      }
+  
       if (response?.status === 429) {
         if (retryCount >= this.MAX_RETRIES) {
           throw new SpotifyApiError(
@@ -109,43 +121,18 @@ export class SpotifyAdapter implements IMetadataFetcher {
             endpoint
           );
         }
-
         const retryAfter = parseInt(response.headers['retry-after'] || '5');
         await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
         return this.makeRequest(endpoint, params, retryCount + 1);
       }
-
-      // Handle token expiration
-      if (response?.status === 401) {
-        try {
-          await this.refreshAccessToken();
-          return this.makeRequest(endpoint, params);
-        } catch (refreshError) {
-          throw new SpotifyAuthError('Your session has expired. Please authenticate again.');
-        }
-      }
-
-      // Handle specific error cases
-      switch (response?.status) {
-        case 404:
-          throw new SpotifyApiError('The requested resource was not found', 404, endpoint);
-        case 500:
-          throw new SpotifyApiError('Internal server error', 500, endpoint);
-      }
-
-      // Handle network errors
-      if (!response) {
-        throw new SpotifyApiError('Network connection error', undefined, endpoint);
-      }
-
-      // Generic error handling
+  
       throw new SpotifyApiError(
-        response.data?.error?.message || 'An unexpected error occurred',
-        response.status,
+        response?.data?.error?.message || 'An unexpected error occurred',
+        response?.status,
         endpoint
       );
     }
-  }
+  }  
 
   private async validateToken(): Promise<void> {
     try {
@@ -159,23 +146,19 @@ export class SpotifyAdapter implements IMetadataFetcher {
     }
   }
 
-  public async refreshAccessToken(): Promise<void> {
-    try {
-      const newTokens = await SpotifyAuthService.refreshToken(this.refreshToken);
-      
-      if (!newTokens?.access_token) {
-        throw new SpotifyAuthError('No valid access token received');
-      }
-
-      this.accessToken = newTokens.access_token;
-      if (newTokens.refresh_token) {
-        this.refreshToken = newTokens.refresh_token;
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      throw new SpotifyAuthError(`Token refresh error: ${message}`);
-    }
-  }
+  // En SpotifyAdapter.ts - Método refreshAccessToken
+public async refreshAccessToken(): Promise<void> {
+  const newTokens = await SpotifyAuthService.refreshToken(this.refreshToken);
+  this.accessToken = newTokens.access_token;
+  if (newTokens.refresh_token) this.refreshToken = newTokens.refresh_token;
+  
+  // Actualizar localStorage
+  localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify({
+    accessToken: this.accessToken,
+    refreshToken: this.refreshToken,
+    timestamp: Date.now()
+  }));
+}
 
   async fetchSongInfo(title: string, artist: string): Promise<SongMetadata> {
     await this.validateToken();

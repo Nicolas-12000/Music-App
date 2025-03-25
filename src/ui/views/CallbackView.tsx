@@ -27,30 +27,36 @@ export const CallbackView = () => {
           throw new Error('Parámetros de autenticación incompletos');
         }
 
-        // Validar state almacenado
-        const savedState = localStorage.getItem('spotify_auth_state');
-        if (!savedState) {
+        // Recuperar y validar el estado almacenado
+        const storedStateData = localStorage.getItem('spotify_auth_state');
+        if (!storedStateData) {
           throw new Error('Sesión no iniciada correctamente');
         }
-        
-        // Comparar states
+
+        const { value: savedState, timestamp } = JSON.parse(storedStateData);
+
+        // Comparar estados y verificar expiración
         if (state !== savedState) {
           throw new Error('Error de seguridad: State no coincide');
         }
+        if (Date.now() - timestamp > 5 * 60 * 1000) {
+          throw new Error('Sesión expirada');
+        }
 
-        // Limpiar el state guardado
+        // Limpiar el estado almacenado
         localStorage.removeItem('spotify_auth_state');
 
         // Continuar con la autenticación
         await handleSpotifyCallback(code);
 
         window.history.replaceState({}, document.title, window.location.pathname);
-        // Opcional: redirigir a la página principal
-        // navigate('/');
+        navigate('/'); // Redirigir a la página principal tras éxito
       } catch (error) {
         console.error('Error en autenticación:', error);
-        // Manejar errores de autenticación
-        // navigate('/error', { state: { message: error instanceof Error ? error.message : 'Error desconocido' } });
+        localStorage.removeItem('spotify_auth_state');
+        navigate('/error', {
+          state: { message: error instanceof Error ? error.message : 'Error desconocido' },
+        });
       }
     };
 
