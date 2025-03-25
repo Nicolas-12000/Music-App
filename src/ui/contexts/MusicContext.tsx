@@ -82,6 +82,30 @@ interface MusicProviderProps {
 
 const TOKEN_STORAGE_KEY = 'spotify_tokens';
 
+/**
+ * Genera o reutiliza el state de autenticación con timestamp.
+ * Solo genera uno nuevo si no existe o si ha expirado (más de 5 minutos).
+ */
+const generateState = () => {
+  const existing = localStorage.getItem('spotify_auth_state');
+  if (existing) {
+    try {
+      const parsed = JSON.parse(existing);
+      if (Date.now() - parsed.timestamp < 300000) { // 5 minutos
+        return parsed.value;
+      }
+    } catch (error) {
+      // Si hay error al parsear, se genera uno nuevo
+    }
+  }
+  const newState = crypto.randomUUID();
+  localStorage.setItem('spotify_auth_state', JSON.stringify({
+    value: newState,
+    timestamp: Date.now()
+  }));
+  return newState;
+};
+
 export function MusicProvider({ children }: MusicProviderProps) {
   const [playlist] = useState<Playlist>(new Playlist());
   const [currentSong, setCurrentSong] = useState<SongNode | null>(null);
@@ -96,40 +120,65 @@ export function MusicProvider({ children }: MusicProviderProps) {
 
   const persistenceAdapter = new LocalStorageAdapter();
 
-  const generateState = () => {
+  function spotifyLogin() {
     const state = crypto.randomUUID();
-    localStorage.setItem('spotify_auth_state', state);
-    return state;
-  };
-
-  const spotifyLogin = () => {
-    const state = generateState();
-    const authUrl = SpotifyAuthService.getAuthUrl(state);
+    console.log("Generando state:", state);
+    console.log("Guardado en localStorage:", localStorage.getItem("spotify_auth_state"));
+  
+    localStorage.setItem('spotify_auth_state', JSON.stringify({
+      value: state,
+      timestamp: Date.now()
+    }));
+  
+    const authService = SpotifyAuthService.getInstance();
+    const authUrl = authService.getAuthUrl(state);
+  
     window.location.href = authUrl;
-  };
-
+  }
+  
   const handleSpotifyCallback = async (code: string | undefined) => {
     setIsAuthenticating(true);
     try {
       if (!code) {
-        throw new Error('Authorization code is missing from callback');
+        throw new Error('Código de autorización faltante');
       }
+  
+      const storedStateData = localStorage.getItem('spotify_auth_state');
+      if (!storedStateData) {
+        throw new Error('Estado de autenticación no encontrado');
+      }
+  
+      const { value: savedState, timestamp } = JSON.parse(storedStateData);
+  
+      if (Date.now() - timestamp > 5 * 60 * 1000) {
+        throw new Error('El estado de autenticación ha expirado');
+      }
+  
+      localStorage.removeItem('spotify_auth_state');
+  
       const adapter = await SpotifyAdapter.initialize(code);
       setSpotifyAdapter(adapter);
       setIsAuthenticated(true);
-
+  
       localStorage.setItem(
         TOKEN_STORAGE_KEY,
         JSON.stringify({
           accessToken: adapter.getAccessToken(),
           refreshToken: adapter.getRefreshToken(),
+          timestamp: Date.now()
         })
       );
-      toast.success('Successfully connected to Spotify!');
+  
+      toast.success('Conectado exitosamente a Spotify!');
     } catch (error) {
       console.error('Error de autenticación:', error);
       setIsAuthenticated(false);
-      toast.error('Failed to connect to Spotify. Please try again.');
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+      toast.error(
+        error instanceof Error
+          ? `Falló la conexión: ${error.message}`
+          : 'No se pudo conectar con Spotify'
+      );
     } finally {
       setIsAuthenticating(false);
     }

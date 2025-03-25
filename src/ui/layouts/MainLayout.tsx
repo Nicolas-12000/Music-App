@@ -1,13 +1,16 @@
-import { useMusicContext } from "@/ui/contexts/MusicContext";
-import { Outlet } from "react-router-dom";
-import { motion } from "framer-motion";
+import React from 'react';
+import { Outlet } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useMusicContext } from '@/ui/contexts/MusicContext';
+import { FaSpotify } from 'react-icons/fa';
+import { FaHeadphones } from 'react-icons/fa'; // Importamos el icono de auriculares
 
 export function MainLayout() {
-  const { isLoading, playlist, isAuthenticated, spotifyLogin } = useMusicContext();
+  const { isLoading, isAuthenticated, spotifyLogin } = useMusicContext();
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gradient-to-b from-[#1a1a1a] to-[#0a0a0a]">
+      <div className="flex items-center justify-center h-screen bg-background">
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
@@ -21,49 +24,45 @@ export function MainLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#1a1a1a] via-[#121212] to-[#0a0a0a]">
-      <main className="container mx-auto px-4 py-8 flex flex-col items-center ">
-        {playlist.length === 0 ? (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center"
-          >
-            <div className="space-y-4">
-              <p className="text-xl text-gray-300 font-medium">
-                {isAuthenticated 
-                  ? "¡Tu playlist está vacía!" 
-                  : "Conecta con Spotify para empezar"}
-              </p>
-              
-              {!isAuthenticated && (
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={spotifyLogin}
-                  className="bg-spotify-green hover:bg-[#1db954]/90 px-8 py-3 rounded-full text-white font-medium flex items-center gap-2 mx-auto transition-all"
-                >
-                  <img 
-                    src="/spotify-icon.png" 
-                    alt="Spotify" 
-                    className="w-6 h-6"
-                  />
-                  Continuar con Spotify
-                </motion.button>
-              )}
+    <div className="min-h-screen flex flex-col bg-background">
+      {/* Encabezado centrado */}
+      <header className="flex flex-col items-center justify-center p-8 space-y-4 w-full">
+  <h1 className="text-3xl font-bold text-center flex items-center gap-2">
+    <FaHeadphones className="text-xl" />
+    <AnimatePresence>
+      {['M', 'u', 's', 'i', 'c', ' ', 'A', 'p', 'p'].map((letter, index) => (
+        <motion.span
+          key={index}
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.1 }}
+          style={{
+            background: "linear-gradient(to right, #6366F1, #8B5CF6)",
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}
+        >
+          {letter}
+        </motion.span>
+      ))}
+    </AnimatePresence>
+  </h1>
 
-              {isAuthenticated && (
-                <p className="text-sm text-gray-400 max-w-md">
-                  Usa la barra de búsqueda arriba para añadir canciones a tu lista.
-                  <br />
-                  Puedes organizarlas con las estrategias de inserción.
-                </p>
-              )}
-            </div>
-          </motion.div>
-        ) : (
-          <Outlet />
-        )}
+  {!isAuthenticated && (
+    <motion.button
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      onClick={spotifyLogin}
+      className="bg-gradient-to-r from-spotify-green to-[#1DB954] px-6 py-2 rounded-full text-white font-medium flex items-center gap-2 transition-transform"
+    >
+      <FaSpotify className="w-5 h-5" />
+      Conectar con Spotify
+    </motion.button>
+  )}
+</header>
+      {/* Contenido principal centrado */}
+      <main className="flex-grow flex flex-col items-center justify-center px-4 w-full mx-auto">
+        <Outlet />
       </main>
     </div>
   );

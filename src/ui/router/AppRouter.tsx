@@ -1,30 +1,33 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { MusicProvider } from '@/ui/contexts/MusicContext';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { MainLayout } from '@/ui/layouts/MainLayout';
 import { PlaylistView } from '@/ui/views/PlaylistView';
 import { CallbackView } from '@/ui/views/CallbackView';
 import { ErrorView } from '@/ui/views/ErrorView';
+import { useMusicContext } from '@/ui/contexts/MusicContext';
 
-export const AppRouter: React.FC = () => {
+export function AppRouter() {
+  const { isAuthenticated } = useMusicContext();
+
   return (
     <BrowserRouter>
-      <MusicProvider>
-        <Routes>
-          <Route path="/" element={<MainLayout />}>
-            <Route index element={<PlaylistView />} />
-            <Route path="/error" element={<ErrorView />} />
-            <Route path="callback" element={<CallbackView />} />
-          </Route>
-          
-          {/* Ruta de error opcional */}
-          <Route path="*" element={
-            <div className="min-h-screen flex items-center justify-center bg-background">
-              <h1 className="text-2xl text-primary">404 - Página no encontrada</h1>
-            </div>
-          }/>
-        </Routes>
-      </MusicProvider>
+      <Routes>
+        {/* Ruta para el callback de autenticación */}
+        <Route path="/callback" element={<CallbackView />} />
+
+        {/* Rutas protegidas */}
+        <Route path="/" element={<MainLayout />}>
+          <Route
+            index
+            element={
+              isAuthenticated ? <PlaylistView /> : <Navigate to="/" replace />
+            }
+          />
+        </Route>
+
+        {/* Ruta para manejar errores o páginas no encontradas */}
+        <Route path="*" element={<ErrorView />} />
+      </Routes>
     </BrowserRouter>
   );
-};
+}
